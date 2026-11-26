@@ -1,0 +1,29 @@
+{
+  "name": "headway-demo-paired-order-runner",
+  "version": "1.2.0",
+  "description": "Standalone demo-only Headway MT5 login and fixed EURUSD paired market-order runner; no strategy engine or market data.",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "ts-node src/index.ts --mode=paired-order",
+    "login": "ts-node src/index.ts --mode=login",
+    "paired-order": "ts-node src/index.ts --mode=paired-order",
+    "test": "ts-node test/policy.test.ts && ts-node test/login-contract.test.ts && ts-node test/parsers.test.ts && ts-node test/order-guard.test.ts && ts-node test/no-market-data.test.ts",
+    "install-browsers": "npx playwright install chromium"
+  },
+  "dependencies": {
+    "playwright": "^1.48.0",
+    "playwright-extra": "^4.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2",
+    "dotenv": "^16.4.5",
+    "commander": "^12.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.6.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
