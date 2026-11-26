@@ -1,0 +1,77 @@
+name: Headway Demo - Open BUY and SELL (0.50 each)
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: headway-demo-paired-orders
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  paired-demo-orders:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: headway-mt5-web-automation
+
+    env:
+      ACCOUNT_MODE: demo
+      ALLOW_ORDERS: "yes"
+      ORDER_SYMBOLS: EURUSD
+      WEB_TERMINAL_URL: https://hw.online/webterminal/mt5-demo/
+      HEADLESS: "true"
+      SLOW_MO: "60"
+      MT5_LOGIN: ${{ secrets.MT5_LOGIN }}
+      MT5_PASSWORD: ${{ secrets.MT5_PASSWORD }}
+
+    steps:
+      - name: Checkout new repository
+        uses: actions/checkout@v4
+
+      - name: Verify demo-only configuration and credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$MT5_LOGIN" || { echo "::error::Add repository secret MT5_LOGIN"; exit 1; }
+          test -n "$MT5_PASSWORD" || { echo "::error::Add repository secret MT5_PASSWORD"; exit 1; }
+          test "$ACCOUNT_MODE" = "demo"
+          test "$ALLOW_ORDERS" = "yes"
+          case "$WEB_TERMINAL_URL" in
+            *mt5-demo*) ;;
+            *) echo "::error::Refusing a non-demo terminal URL"; exit 1 ;;
+          esac
+          echo "Demo-only configuration verified."
+          echo "The workflow will submit EURUSD BUY 0.50 followed by EURUSD SELL 0.50."
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: headway-mt5-web-automation/package-lock.json
+
+      - name: Install dependencies and browser
+        run: |
+          npm ci --no-audit --no-fund
+          npm run build
+          npm test
+          npx playwright install --with-deps chromium
+
+      - name: Login and submit the two demo orders
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts
+          npx ts-node src/index.ts --mode=paired-order 2>&1 | tee artifacts/paired-order-run.log
+
+      - name: Upload execution evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: headway-demo-paired-orders-${{ github.run_id }}
+          path: headway-mt5-web-automation/artifacts/
+          retention-days: 7
+          if-no-files-found: warn

@@ -1,0 +1,53 @@
+name: Install Headway Demo Paired-Order Project
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  install:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout empty repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      - name: Verify project archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          ZIP="headway-demo-paired-orders.zip"
+          test -f "$ZIP" || { echo "::error::Upload $ZIP to the repository root first."; exit 1; }
+          unzip -tq "$ZIP"
+
+      - name: Extract and install project
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/headway-project
+          unzip -q headway-demo-paired-orders.zip -d /tmp/headway-project
+          test -f /tmp/headway-project/README.md
+          test -f /tmp/headway-project/.github/workflows/headway-demo-paired-orders.yml
+          rsync -a --delete \
+            --exclude='.git/' \
+            --exclude='headway-demo-paired-orders.zip' \
+            --exclude='.github/workflows/bootstrap-install.yml' \
+            /tmp/headway-project/ ./
+          rm -f headway-demo-paired-orders.zip
+
+      - name: Commit installed project
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+            exit 0
+          fi
+          git commit -m "Install standalone Headway demo paired-order project"
+          git push
